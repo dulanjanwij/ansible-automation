@@ -21,7 +21,6 @@
     disk_size: "{{ gce_disk_size }}"
     persistent_boot_disk: "{{ gce_persistent_boot_disk }}"
     disk_auto_delete: "{{ gce_disk_auto_delete }}"
-    tags: "{{ gce_tags }}"
     external_ip: "{{ gce_external_ip }}"
     network: "{{ gce_network }}"
     subnetwork: "{{ gce_subnetwork | default(omit) }}"
