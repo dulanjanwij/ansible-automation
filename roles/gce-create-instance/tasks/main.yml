@@ -1,0 +1,84 @@
+- debug: var=gce_instance_name
+
+- name: split zone
+  set_fact:
+    zone_name : "{{ zone.split('-')[1] }}"
+  when: zone is defined
+
+- debug: var=zone_name
+
+- name: Create instance
+  delegate_to: localhost
+  gce:
+    service_account_email: "{{ gce_service_account }}"
+    credentials_file: "{{ gce_json_cred_file }}"
+    instance_names: "{{ gce_instance_name }}"
+    zone: "{{ gce_zone | default(REGION.stdout + '-' + zone_name + '-' + ZONE.stdout) }}"
+    machine_type: "{{ gce_machine_type }}"
+    image: "{{ gce_image }}"
+    state: "{{ gce_state }}"
+    project_id: "{{ gce_project_id }}"
+    disk_size: "{{ gce_disk_size }}"
+    persistent_boot_disk: "{{ gce_persistent_boot_disk }}"
+    disk_auto_delete: "{{ gce_disk_auto_delete }}"
+    tags: "{{ gce_tags }}"
+    external_ip: "{{ gce_external_ip }}"
+    network: "{{ gce_network }}"
+    subnetwork: "{{ gce_subnetwork | default(omit) }}"
+    internal_ip: "{{ gce_internal_ip }}"
+    metadata: "{{ gce_startup_script_url | default(omit) }}"
+  register: gce
+
+- debug: var=gce
+
+- name: Ip to use to connect (public)
+  set_fact:
+    new_instance_reachable_ip: "{{ item.public_ip }}"
+  with_items: "{{ gce.instance_data }}"
+  when:
+    - item.public_ip is defined
+    - gce_state != "deleted"
+    - gce_project_id != "myadcloud" or gce_network != "default"
+
+- name: Ip to use to connect (private)
+  set_fact:
+    new_instance_reachable_ip: "{{ item.public_ip }}"
+  with_items: "{{ gce.instance_data }}"
+  when:
+    - item.public_ip is not defined or (gce_network == "default")
+    - gce_state != "deleted"
+
+- name: Wait for SSH (public_ip)
+  delegate_to: localhost
+  wait_for: host={{ item.public_ip }} port=22 delay=10 timeout=300
+  with_items: "{{ gce.instance_data }}"
+  when:
+    - item.public_ip is defined
+    - gce_state != "deleted"
+    - gce_project_id != "myadcloud" or gce_network != "default"
+
+- name: Wait for SSH
+  delegate_to: localhost
+  wait_for: host={{ item.private_ip }} port=22 delay=10 timeout=150
+  with_items: "{{ gce.instance_data }}"
+  when:
+    - item.public_ip is not defined or (gce_network == "default")
+    - gce_state != "deleted"
+
+- debug: var=disks_dict
+  when: add_disk
+
+- name: Add disks
+  delegate_to: localhost
+  gce_pd:
+    instance_name: "{{ gce_instance_name }}"
+    delete_on_termination: yes
+    name: "{{ item.value.disk_name }}"
+    service_account_email: "{{ gce_service_account }}"
+    credentials_file: "{{ gce_json_cred_file }}"
+    project_id: "{{ gce_project_id }}"
+    size_gb: "{{ item.value.disk_size }}"
+    zone: "{{ gce_zone | default(REGION.stdout + '-central1-' + ZONE.stdout) }}"
+    mode: READ_WRITE
+  with_dict: "{{ disks_dict }}"
+  when: add_disk

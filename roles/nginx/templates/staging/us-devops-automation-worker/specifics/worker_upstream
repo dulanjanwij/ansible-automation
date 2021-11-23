@@ -1,0 +1,6 @@
+upstream worker_upstream {
+server 127.0.0.1:9060;
+}
+upstream static_upstream {
+server 127.0.0.1:80;
+}

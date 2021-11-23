@@ -1,0 +1,31 @@
+- name: Create specified directory
+  file: path={{ item.path | mandatory }} state=directory mode={{ item.mode | default("0755") }} owner={{ item.owner | default("root") }} group={{ item.group | default("root") }} recurse={{ item.recurse | default("no") }} follow={{ item.follow | default("no") }}
+  with_items: "{{ directories|default([]) }}"
+  when: item is defined
+
+- name: Create specified symlinks
+  file: src={{ item.src | mandatory }} dest={{ item.dst | mandatory }} state=link mode={{ item.mode | default("0777") }} owner={{ item.owner | default("root") }} group={{ item.group | default("root") }} force={{ item.force | default("no") }} follow={{ item.follow | default("no") }}
+  with_items: "{{ symlinks|default([]) }}"
+  when: item is defined
+
+- name: Create specified files
+  file: path={{ item.path | mandatory }} mode={{ item.mode | default("0644") }} owner={{ item.owner | default("root") }} group={{ item.group | default("root") }} state=touch follow={{ item.follow | default("no") }}
+  with_items: "{{ files|default([]) }}"
+  when: item is defined
+
+- name: Apply rights to files
+  file: path={{ item.path | mandatory }} mode={{ item.mode | mandatory }} owner={{ item.owner | default("root") }} group={{ item.group | default("root") }} recurse={{ item.recurse | default("no") }} follow={{ item.follow | default("no") }}
+  with_items: "{{ rights|default([]) }}"
+  when: item is defined
+
+- name: Empty directories
+  include: empty_directories.yml
+  with_items: "{{ empty_directories|default([]) }}"
+  loop_control:
+    loop_var: dir_to_empty
+  when: dir_to_empty is defined
+
+- name: Delete files
+  file: path={{ item.path | mandatory }} state=absent follow={{ item.follow | default("no") }}
+  with_items: "{{ delete_files|default([]) }}"
+  when: item is defined

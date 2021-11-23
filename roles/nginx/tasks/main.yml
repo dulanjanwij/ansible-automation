@@ -1,0 +1,108 @@
+- name: Ensure logs folder exist
+  file: path=/devops/logs/nginx mode=0655 state=directory
+  ignore_errors: yes
+
+- name: Add Maxmind repo
+  apt_repository: repo='ppa:maxmind/ppa'
+
+- name: Install dependencies for openresty
+  apt:
+    name: "{{ item }}"
+    update_cache: yes
+    force: yes
+    dpkg_options: "force-confdef,force-confold,force-overwrite"
+  loop:
+    - nginx
+    - libreadline-dev
+    - libncurses5-dev
+    - libpcrecpp0
+    - libpcre3-dev
+    - libssl-dev
+    - libmaxminddb0
+    - libmaxminddb-dev
+    - lua-zlib
+    - perl
+    - libluajit-5.1-2
+
+- name: Install openresty
+  apt:
+    name: nginx-openresty={{ openresty_version }}
+    dpkg_options: "force-confdef,force-confold,force-overwrite"
+    force: yes
+  when: openresty == "yes" and environment_id == "staging"
+  register: task_status
+
+- name: Copy nginx configuration
+  template: src="{{ environment_id }}/{{ config_prefix }}/nginx.conf" dest="/etc/nginx/nginx.conf"
+  tags:
+   - code
+
+- name: Copy specific configurations
+  template: src="{{ role_path }}/templates/{{ environment_id }}/{{ config_prefix }}/specifics/{{ item }}" dest="/etc/nginx/{{ item }}"
+  with_items: "{{ specific_configs }}"
+  when: specific_configs is defined
+  tags:
+   - code
+
+- name: Remove default vhost
+  file: path="/etc/nginx/sites-available/default" state=absent
+
+- name: Remove default vhost
+  file: path="/etc/nginx/sites-enabled/default" state=absent
+
+- name: Copy vhost configurations
+  template: src="{{ item }}" dest="/etc/nginx/sites-available/{{ item | basename }}"
+  with_fileglob:
+    - "{{ role_path }}/templates/{{ environment_id }}/{{ config_prefix }}/vhosts/*"
+  tags:
+   - code
+   - vhosts_config
+
+- name: Enabled vhosts configuration
+  file: src="/etc/nginx/sites-available/{{ item | basename }}" dest="/etc/nginx/sites-enabled/{{ item | basename }}" state=link
+  with_fileglob:
+    - "{{ role_path }}/templates/{{ environment_id }}/{{ config_prefix }}/vhosts/*"
+  when: enabled_vhosts is undefined
+  tags:
+   - code
+   - vhosts_config
+
+- name: Enabled specific vhosts configuration
+  file: src="/etc/nginx/sites-available/{{ item }}" dest="/etc/nginx/sites-enabled/{{ item }}" state=link
+  with_items: "{{ enabled_vhosts | default([]) }}"
+  when: enabled_vhosts is defined
+  tags:
+   - code
+   - vhosts_config
+
+- name: Restart nginx
+  service: name=nginx state=restarted
+  when: restart_nginx == "yes" and (ansible_service_mgr == "service" or ansible_service_mgr == "upstart")
+  tags:
+   - code
+   - ssl_cert
+   - vhosts_config
+
+- name: Systemd daemon-reload
+  systemd: daemon_reload=yes
+  when: ansible_service_mgr == "systemd"
+  tags:
+   - code
+   - ssl_cert
+   - vhosts_config
+
+- name: Enable nginx at boot time (systemd)
+  command: /bin/systemctl enable nginx
+  when: ansible_service_mgr == "systemd"
+  tags:
+   - code
+   - ssl_cert
+   - vhosts_config
+
+- name: Restart nginx (systemd)
+  systemd: name=nginx state=restarted
+  when: restart_nginx == "yes" and ansible_service_mgr == "systemd"
+  tags:
+   - code
+   - ssl_cert
+   - vhosts_config

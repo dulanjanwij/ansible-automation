@@ -1,0 +1,44 @@
+root /devops/www/;
+
+index index.php;
+
+location /nginx_status {
+    stub_status on;
+    access_log off;
+    allow 127.0.0.1;
+    deny all;
+}
+
+proxy_intercept_errors on;
+error_page 404 = @index;
+
+location / {
+    if ($http_x_forwarded_proto = "http") {
+       return 302 https://$host$request_uri;
+    }
+    try_files $uri $uri/ @static;
+}
+
+location ~ \.php$ {
+root /adcash/www/src/web/;
+    include        fastcgi_params;
+    fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    fastcgi_index  index.php;
+    fastcgi_pass   worker_upstream;
+}
+
+location @403 {
+    return 403;
+}
+
+location ~ /\.(ht|svn|git) {
+    deny all;
+}
+
+location @static {
+    proxy_pass http://static_upstream;
+}
+
+location @index {
+try_files $uri $uri/ /index.php?$args;
+}

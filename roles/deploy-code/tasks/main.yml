@@ -1,0 +1,46 @@
+- name: Check if excludes.list exists
+  local_action: stat path="{{ role_path }}/templates/{{ environment_id }}/{{ config_prefix }}/excludes.list"
+  register: excludes_exists
+
+- name: Copy code - (w/ excludes.list)
+  synchronize:
+    src: "{{ local_code_path }}/"
+    dest: "{{ remote_code_path }}"
+    rsync_opts:
+      - '--exclude=.git'
+      - '--exclude=.gitlab-ci.yml'
+      - '--exclude-from={{ role_path }}/templates/{{ environment_id }}/{{ config_prefix }}/excludes.list'
+    delete: yes
+  when: excludes_exists.stat.exists and include_file is undefined
+
+- name: Copy code - (w/ include.list)
+  synchronize:
+    src: "{{ local_code_path }}/"
+    dest: "{{ remote_code_path }}"
+    rsync_opts:
+      - '--exclude=.git'
+      - '--exclude=.gitlab-ci.yml'
+      - '--files-from={{ include_file }}'
+    delete: yes
+  when: include_file is defined
+
+- name: Copy code - (w/o excludes.list)
+  synchronize:
+    src: "{{ local_code_path }}/"
+    dest: "{{ remote_code_path }}"
+    rsync_opts:
+      - '--exclude=.git'
+      - '--exclude=.gitlab-ci.yml'
+    delete: yes
+  when: not excludes_exists.stat.exists and include_file is undefined
+
+- debug: var=old_aggregator_db_password
+
+- name: Set the right owner for the code directory
+  file: path={{ remote_code_path }} state=directory owner={{ remote_code_owner | default(omit) }} recurse=yes follow=no
+
+- name: Copy code config files
+  template: src="{{ environment_id }}/{{ config_prefix }}/{{ item.src }}" dest="{{ remote_code_path }}/{{ item.dst | default(item.src) }}"
+  loop: "{{ config_files }}"
+  tags:
+   - config

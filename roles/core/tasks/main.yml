@@ -1,0 +1,103 @@
+- name: remove ubuntu user requirement
+  lineinfile: dest=/root/.ssh/authorized_keys
+              regexp='.*Please.*'
+              state=absent
+  when: core_remote_is_up == "yes"
+  ignore_errors: yes
+  tags:
+    - always
+
+- name: remove ubuntu user requirement
+  lineinfile: dest=/root/.ssh/authorized_keys
+              regexp='.*ubuntu.*'
+              state=absent
+  when: core_remote_is_up == "yes"
+  ignore_errors: yes
+  tags:
+    - always
+
+- name: Save hostname into variable
+  delegate_to: localhost
+  shell: ssh -o StrictHostKeyChecking=no "{{ inventory_hostname }}" "hostname"
+  register: TMP_HOSTNAME
+  ignore_errors: yes
+  tags:
+    - always
+
+- name: Use inventory name if REMOTE_HOSTNAME is unavailable
+  delegate_to: localhost
+  set_fact: REMOTE_HOSTNAME="{{ inventory_hostname }}"
+  when: TMP_HOSTNAME is failed or TMP_HOSTNAME is skipped
+  tags:
+    - always
+
+- name: Use REMOTE_HOSTNAME if SSH connection was successful
+  delegate_to: localhost
+  set_fact: REMOTE_HOSTNAME="{{ TMP_HOSTNAME.stdout }}"
+  when: TMP_HOSTNAME is succeeded
+  tags:
+    - always
+
+- name: Parse hostname - fetch target - ignored
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}"  | awk -F'-' '{print $6}' | grep -vE '^g[0-9]+$'
+  register: TARGET
+  ignore_errors: true
+  tags:
+    - always
+
+- name: Parse hostname - fetch group (w/ target)
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $6}'
+  register: GROUPA
+  when: TARGET is failed
+  tags:
+    - always
+
+- name: Parse hostname - fetch group (w/o target)
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $7}'
+  register: GROUPB
+  when: TARGET is succeeded
+  tags:
+    - always
+
+- name: Set group
+  set_fact: GROUP="{{ GROUPA if TARGET is failed else GROUPB }}"
+  tags:
+    - always
+
+- name: Parse hostname - fetch region
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $1}'
+  register: REGION
+  tags:
+    - always
+
+- name: Parse hostname - fetch component
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $2}'
+  register: COMPONENT
+  tags:
+    - always
+
+- name: Parse hostname - fetch type
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $3}'
+  register: TYPE
+  tags:
+    - always
+
+- name: Parse hostname - fetch role
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $4}'
+  register: ROLE
+  tags:
+    - always
+
+- name: Parse hostname - fetch zone
+  delegate_to: localhost
+  shell: echo "{{ REMOTE_HOSTNAME }}" | awk -F'-' '{print $5}'
+  register: ZONE
+  tags:
+    - always

@@ -1,0 +1,29 @@
+gce_json_cred_file: "/devops/service_account.json"
+gce_service_account: "ansible-sa@hallowed-glider-332506.iam.gserviceaccount.com"
+gce_instance_name: "{{ inventory_hostname }}"
+gce_machine_type: "n1-standard-1"
+gce_image: "projects/ubuntu-os-cloud/global/images/family/ubuntu-1804-lts"
+gce_state: "present"
+gce_project_id: "hallowed-glider-332506"
+gce_disk_size: "10"
+gce_disk_auto_delete: True
+gce_external_ip: "none"
+gce_network: "default"
+gce_internal_ip: "none"
+gce_persistent_boot_disk: True
+zone: "us-central1"
+## stub vars to avoid "AnsibleUndefinedVariable" error
+REGION:
+  stdout: ""
+ZONE:
+  stdout: ""
+
+### Additional disks vars
+
+add_disk: False  # additional disks creation switched off by default
+
+disks_dict: {}
+
+## EXAMPLE ( adding 2 disks )
+
+# -e "{'disks_dict': {'disk1': {'disk_name': 'asp-disk', 'disk_size': '11'}, 'disk2': {'disk_name': 'asp-disk2', 'disk_size': '12'}}}"

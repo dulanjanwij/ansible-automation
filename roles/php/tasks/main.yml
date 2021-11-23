@@ -1,0 +1,44 @@
+---
+   - name: adding php-qa repository
+     apt_repository:
+       repo: 'ppa:ondrej/php-qa'
+     when: installed_php_version != "5.6"
+
+   - name: adding php repository
+     apt_repository:
+       repo: 'ppa:ondrej/php'
+
+   - name: Install php-common
+     apt: name=php{{ installed_php_version }}-common={{ installed_php_specific_version }} state=present update_cache=yes
+     when: installed_php_specific_version is defined
+
+   - name: Install php-cli
+     apt: name=php{{ installed_php_version }}-cli={{ installed_php_specific_version }} state=present update_cache=yes
+     when: installed_php_specific_version is defined
+
+   - name: Install libpcre3 depedancies for php-dev (bionic)
+     apt: name={{ item }} state=latest
+     loop:
+        - libpcrecpp0v5
+        - libpcre3
+        - libpcre3-dev
+     when: installed_php_version != "5.6" and ansible_distribution != 'trusty'
+
+   - name: Install php modules
+     apt: name={{ item }} state=latest
+     loop: "{{ default_apt_modules + apt_modules }}"
+     when: installed_php_version != "5.6" and installed_php_specific_version is not defined
+
+   - name: Install php modules
+     apt: name={{ item }}={{ installed_php_specific_version }} state=present
+     loop: "{{ default_apt_modules + apt_modules }}"
+     when: installed_php_specific_version is defined
+
+   - name: Render php-cli to the right version
+     shell: update-alternatives --set php /usr/bin/php{{ installed_php_version }}
+
+   - name: Render phpize to the right version
+     shell: update-alternatives --set phpize /usr/bin/phpize{{ installed_php_version }}
+
+   - name: Render phpize to the right version
+     shell: update-alternatives --set php-config /usr/bin/php-config{{ installed_php_version }}

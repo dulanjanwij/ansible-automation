@@ -1,0 +1,49 @@
+---
+- hosts: "{{ target_hosts }}"
+  become: true
+  vars:
+    environment_id: staging
+
+  become_user: root
+  gather_facts: no
+  roles:
+    - role: core
+      core_remote_is_up: "no"
+
+    - role: gce-create-instance
+
+    - role: core
+      core_remote_is_up: "yes"
+      ansible_ssh_user: ubuntu
+      
+    - role: php-fpm
+      config_prefix: "us-devops-automation-worker"
+
+    - role: nginx
+      openresty: "yes"
+      config_prefix: "us-devops-automation-worker"
+      openresty_version: "1.19.9.1"
+      specific_configs:
+       - "devops_locations"
+       - "worker_upstream"
+      when: environment_id == "staging"
+
+    - role: files-management
+      directories:
+       - path: "/devops/logs/nginx/"
+      tags:
+       - code
+
+    - role: files-management
+      directories:
+       - path: "/devops/www/"
+      tags:
+       - code
+
+    - role: deploy-code
+      repo_url: "https://github.com/dulanjanwij/PHPProject.git"
+      local_code_path: "/devops/repositories/phpproject/"
+      remote_code_path: "/devops/www"
+      branch: "master"
+      config_prefix: ""
+      remote_code_owner: "root"

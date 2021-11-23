@@ -1,0 +1,12 @@
+---
+dependencies:
+  - role: update-local-code
+
+  - role: files-management
+    directories: [
+      {
+          path: "{{ remote_code_path }}",
+          owner: "{{ remote_code_owner | default(omit) }}",
+          group: "{{ remote_code_group | default(omit) }}"
+      }
+    ]

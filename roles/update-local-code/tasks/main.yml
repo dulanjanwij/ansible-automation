@@ -1,0 +1,10 @@
+- name: Update git repo
+  delegate_to: localhost
+  run_once: true
+  git: repo="{{ repo_url }}"
+       accept_hostkey=true
+       dest="{{ local_code_path }}"
+       force=yes
+       bare=no
+       update=yes
+       version={{ branch }}

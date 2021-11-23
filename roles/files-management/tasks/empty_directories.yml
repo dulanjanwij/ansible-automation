@@ -1,0 +1,18 @@
+- name: List all files to delete
+  find: path={{ dir_to_empty.path }} file_type=file
+  register: internal_files
+
+- name: List all directories to be removed
+  find: path={{ dir_to_empty.path }} file_type=directory
+  register: internal_directories
+
+- name: Empty files then directory
+  file: state=absent path={{ item.path }}
+  with_items: 
+    - "{{ internal_files }}"
+    - "{{ internal_directories }}"
+
+- name: Clean up temporary variable
+  set_fact:
+    internal_files: ""
+    internal_directories: ""

@@ -1,0 +1,9 @@
+---
+- name: restart php-fpm - systemd
+  become: true
+  systemd:
+    daemon_reload: true
+    name: php{{ installed_php_version }}-fpm
+    state: restarted
+  listen: restart php-fpm
+  when: ansible_service_mgr == "systemd"

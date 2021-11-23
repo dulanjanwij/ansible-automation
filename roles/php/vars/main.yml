@@ -1,0 +1,9 @@
+---
+default_apt_modules:
+   - php{{ installed_php_version }}-common
+   - php{{ installed_php_version }}-cli
+   - php{{ installed_php_version }}-curl
+   - php{{ installed_php_version }}-xml
+   - php{{ installed_php_version }}-dev
+
+apt_modules: []

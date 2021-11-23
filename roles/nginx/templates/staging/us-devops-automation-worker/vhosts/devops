@@ -1,0 +1,10 @@
+server {
+    listen 0.0.0.0:80;
+
+    server_name www.devops-automation.com devops-automation.com;
+    location = /index.php {
+        default_type 'text/plain';
+        content_by_lua "ngx.say('')";
+    }
+    include /etc/nginx/devops_locations;
+}
