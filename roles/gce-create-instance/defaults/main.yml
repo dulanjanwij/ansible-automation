@@ -7,7 +7,7 @@ gce_state: "present"
 gce_project_id: "hallowed-glider-332506"
 gce_disk_size: "10"
 gce_disk_auto_delete: True
-gce_external_ip: "none"
+gce_external_ip: "ephemeral"
 gce_network: "default"
 gce_internal_ip: "none"
 gce_persistent_boot_disk: True
